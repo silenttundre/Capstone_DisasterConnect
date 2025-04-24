@@ -8,5 +8,5 @@ SENDGRID_API_KEY=SG.EY-rfuABQzmnN5G1FR_hLg.Ma7J9V01UY4TpCcQme6OguXQ8-b6Jo7AnR879
 (Note: You will need to get your own OPENAI_API_KEY)
 
 # To run it:
-You will need to create a python environment and pip install the following libraries:
+You will need to create a python environment and pip install -r requirements.txt:
 
