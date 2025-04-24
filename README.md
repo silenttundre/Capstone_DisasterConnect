@@ -1,4 +1,6 @@
-# Create a .env file with the following contents and place it in the same location as app.py:
+# Create a .env file
+So, create a .env file with the following contents and place it in the same location as app.py:
+
 OPENAI_API_KEY=
 GOOGLE_API_KEY=AIzaSyDghecxEuRdegKoUHaaNzci_JccHZlAb-c
 PINECONE_API_KEY=pcsk_5JwoX4_3c88FSwyK7Spqq8s48LPpMwbzEPENPeva9YdAnPPpQR7pd4Wos2ZrcGPW4VtPji
@@ -7,6 +9,6 @@ SENDGRID_API_KEY=SG.EY-rfuABQzmnN5G1FR_hLg.Ma7J9V01UY4TpCcQme6OguXQ8-b6Jo7AnR879
 
 (Note: You will need to get your own OPENAI_API_KEY)
 
-# To run it:
-You will need to create a python environment and pip install -r requirements.txt:
+# To run it
+You will need to create a python environment and pip install -r requirements.txt.
 
