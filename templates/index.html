@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DisasterConnect Chatbot</title>
+    <link rel="stylesheet" href="{{ url_for('css', filename='styles.css') }}" />
+    <!-- Add FontAwesome for the microphone icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <style>
+        /* Background Image for Entire Page */
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-image: url('/images/disaster_bg.jpg');
+            background-size: cover; /* Ensure the image covers the entire page */
+            background-position: center center; /* Centers the image */
+            background-repeat: no-repeat; /* Prevent the image from repeating */
+            height: 100vh; /* Make sure the background covers the full viewport height */
+            overflow: hidden; /* Prevent scrollbars */
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container minimized">
+        <!-- Header Section with Logo -->
+        <header class="header" title="DisasterConnect">
+            <img src="{{ url_for('images', filename='logo.png') }}" alt="DisasterConnect Logo" class="logo" />
+            <h1>DisasterConnect Chatbot</h1>
+            <button class="minimize-button" title="Minimize Chat">X</button>
+        </header>
+        
+        <!-- Chat History Box -->
+        <div class="chat-history-box">
+            {% for message, sender, timestamp in chat_history %}
+            <div class="{{ 'bot-message' if sender == 'bot' else 'user-message' }}">
+                <strong>{{ sender.capitalize() }}:</strong> 
+                <!-- Use the safe filter to allow HTML rendering -->
+                <span class="message-content">{{ message|safe }}</span>
+                <span class="timestamp">{{ timestamp }}</span>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Input Box -->
+        <div class="input-box">
+            <form method="POST" class="input-container" id="chatForm">
+                <input type="text" id="user_input" name="user_input" placeholder="Type your message..." required />
+                <!-- Add microphone icon for speech-to-text -->
+                <button type="button" id="micButton" title="Speak"><i class="fas fa-microphone"></i></button>
+                <!-- Add speaker icon for text-to-speech -->
+                <button type="button" id="speakerButton" title="Read Messages"><i class="fas fa-volume-mute"></i></button>
+                <button type="submit" id="sendButton">Send</button>
+            </form>
+            <!-- Progress Bar Container -->
+            <div id="progressContainer" class="progress-container">
+                <div class="progress-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>        
+        document.addEventListener("DOMContentLoaded", () => {
+            const mainContainer = document.querySelector(".main-container");
+            const logo = document.querySelector(".logo");
+            const minimizeButton = document.querySelector(".minimize-button");
+        
+            // Toggle minimize/maximize state
+            const toggleChat = () => {
+                mainContainer.classList.toggle("minimized");
+            };
+        
+            // Add click event listeners for minimize/maximize
+            minimizeButton.addEventListener("click", toggleChat);
+        
+            // Allow clicking the minimized container to maximize
+            mainContainer.addEventListener("click", (e) => {
+                if (mainContainer.classList.contains("minimized") && e.target !== minimizeButton) {
+                    toggleChat();
+                }
+            });
+            
+            // Auto-scroll to bottom of chat history
+            function scrollToBottom() {
+                var chatHistory = document.querySelector(".chat-history-box");
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            }
+        
+            // Progress bar animation (unchanged)
+            function startProgress() {
+                const progressContainer = document.getElementById("progressContainer");
+                const progressFill = progressContainer.querySelector(".progress-fill");
+        
+                // Reset and show progress bar
+                progressContainer.style.display = "block";
+                progressFill.style.width = "0%";
+        
+                // Initial jump to show activity
+                setTimeout(() => {
+                    progressFill.style.width = "20%";
+                }, 100);
+        
+                // Simulate progress
+                let progress = 20;
+                const interval = setInterval(() => {
+                    if (progress < 90) {
+                        progress += Math.random() * 10;
+                        if (progress > 90) progress = 90;
+                        progressFill.style.width = `${progress}%`;
+                    }
+                }, 500);
+        
+                return interval;
+            }
+        
+            function completeProgress() {
+                const progressContainer = document.getElementById("progressContainer");
+                const progressFill = progressContainer.querySelector(".progress-fill");
+        
+                // Complete the progress bar
+                progressFill.style.width = "100%";
+        
+                // Hide after completion
+                setTimeout(() => {
+                    progressContainer.style.display = "none";
+                    progressFill.style.width = "0%";
+                }, 500);
+            }
+        
+            // Form submission handler (unchanged)
+            document.getElementById("chatForm").addEventListener("submit", function(e) {
+                e.preventDefault();
+        
+                const input = document.getElementById("user_input");
+                const sendButton = document.getElementById("sendButton");
+        
+                // Don't submit if input is empty
+                if (!input.value.trim()) {
+                    return;
+                }
+        
+                // Disable input and button while processing
+                input.disabled = true;
+                sendButton.disabled = true;
+        
+                // Start progress bar
+                const progressInterval = startProgress();
+        
+                // Create form data
+                const formData = new FormData();
+                formData.append("user_input", input.value);
+        
+                // Submit the form via fetch
+                fetch("/", {
+                    method: "POST",
+                    body: formData,
+                })
+                .then(response => response.text())
+                .then(html => {
+                    // Create a temporary container to update only chat history
+                    const temp = document.createElement("div");
+                    temp.innerHTML = html;
+        
+                    const newChatHistory = temp.querySelector(".chat-history-box");
+                    document.querySelector(".chat-history-box").innerHTML = newChatHistory.innerHTML;
+        
+                    // Clear the input
+                    input.value = "";
+        
+                    // Complete progress bar
+                    clearInterval(progressInterval);
+                    completeProgress();
+        
+                    // Scroll to bottom
+                    scrollToBottom();
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    alert("An error occurred while sending your message. Please try again.");
+        
+                    // Complete progress bar even on error
+                    clearInterval(progressInterval);
+                    completeProgress();
+                })
+                .finally(() => {
+                    // Re-enable input and button
+                    input.disabled = false;
+                    sendButton.disabled = false;
+                    input.focus();
+                });
+            });
+
+            // Speech-to-text functionality
+            const micButton = document.getElementById("micButton");
+            const userInput = document.getElementById("user_input");
+
+            let recognition;
+
+            if ('webkitSpeechRecognition' in window) {
+                recognition = new webkitSpeechRecognition();
+                recognition.continuous = false; // Stop after one sentence
+                recognition.interimResults = false; // Only final results
+                recognition.lang = 'en-US'; // Set language
+
+                // Start with the microphone icon with a slash
+                micButton.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+
+                micButton.addEventListener("click", () => {
+                    if (recognition && !recognition.isStarted) {
+                        recognition.start();
+                        // Remove the slash when listening starts
+                        micButton.innerHTML = '<i class="fas fa-microphone"></i>';
+                    }
+                });
+
+                recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    userInput.value = transcript; // Set the transcript in the input box
+                    // Bring the slash back when recognition is done
+                    micButton.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+                };
+
+                recognition.onerror = (event) => {
+                    console.error("Speech recognition error:", event.error);
+                    // Bring the slash back on error
+                    micButton.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+                };
+
+                recognition.onend = () => {
+                    // Bring the slash back when recognition ends
+                    micButton.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+                };
+            } else {
+                // Browser does not support speech recognition
+                micButton.style.display = "none"; // Hide the mic button
+                console.warn("Speech recognition not supported in this browser.");
+            }
+        });
+
+        // Text-to-speech functionality
+        const chatHistoryBox = document.querySelector(".chat-history-box");
+
+        // Text-to-speech functionality
+        const speakerButton = document.getElementById("speakerButton");
+        let isSpeaking = false;
+        let utterance = null;
+
+        // Initialize speech synthesis
+        function initSpeech() {
+            if (!window.speechSynthesis) {
+                console.error("Text-to-speech not supported");
+                speakerButton.style.display = "none";
+                return false;
+            }
+            return true;
+        }
+
+        // Speak the latest bot message
+        function speakLatestMessage() {
+            if (!initSpeech()) return;
+
+            const lastBotMessage = document.querySelector(".bot-message:last-child .message-content");
+            if (!lastBotMessage) {
+                alert("No bot messages to read.");
+                return;
+            }
+
+            // Clean text (remove HTML, timestamps, etc.)
+            let text = lastBotMessage.textContent
+                .replace(/<[^>]*>/g, "") // Strip HTML
+                .replace(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/g, ""); // Remove timestamp
+
+            utterance = new SpeechSynthesisUtterance(text.trim());
+            utterance.rate = 1;
+            utterance.volume = 1;
+
+            // Toggle UI feedback
+            speakerButton.innerHTML = '<i class="fas fa-volume-up"></i>';
+            isSpeaking = true;
+
+            utterance.onend = utterance.onerror = () => {
+                speakerButton.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                isSpeaking = false;
+            };
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // Toggle speech on button click
+        speakerButton.addEventListener("click", () => {
+            if (isSpeaking) {
+                window.speechSynthesis.cancel();
+                speakerButton.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                isSpeaking = false;
+            } else {
+                speakLatestMessage();
+            }
+        });
+    </script>
+</body>
+</html>
